@@ -18,6 +18,8 @@ export type RotationMode = 'sequence' | 'random';
 export type Settings = {
   /** bulan mulai, format YYYY-MM */
   start: string;
+  /** Jumat ke-N dalam bulan mulai (1-5). 1 = Jumat pertama bulan tsb. */
+  startWeek: number;
   months: number;
   mode: RotationMode;
   khatibSame: boolean;

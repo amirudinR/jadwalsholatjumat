@@ -11,6 +11,7 @@ export function uid(): string {
 export function defaultSettings(): Settings {
   return {
     start: '',
+    startWeek: 1,
     months: 3,
     mode: 'sequence',
     khatibSame: true,
@@ -66,6 +67,7 @@ function normalizeSettings(input: unknown): Settings {
   const s = input as Partial<Settings>;
   return {
     start: String(s.start ?? base.start),
+    startWeek: Math.min(5, Math.max(1, Number(s.startWeek) || 1)),
     months: ALLOWED_MONTHS.includes(Number(s.months)) ? Number(s.months) : base.months,
     mode: s.mode === 'random' ? ('random' as RotationMode) : base.mode,
     khatibSame: s.khatibSame !== false,

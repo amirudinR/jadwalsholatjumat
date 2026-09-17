@@ -70,8 +70,29 @@ export function nextFriday(from: Date = new Date()): Date {
   return d;
 }
 
-/** Semua hari Jumat di rentang bulan, mulai dari `ym` sebanyak `monthCount` bulan. */
-export function fridaysInRange(ym: string, monthCount: number): Date[] {
+/** Semua hari Jumat dalam satu bulan (format `ym` = YYYY-MM). */
+export function fridaysInMonth(ym: string): Date[] {
+  const parts = String(ym).split('-');
+  if (parts.length !== 2) return [];
+
+  const y = Number(parts[0]);
+  const m = Number(parts[1]);
+  if (!y || !m) return [];
+
+  const lastDay = new Date(y, m, 0).getDate();
+  const out: Date[] = [];
+  for (let day = 1; day <= lastDay; day++) {
+    const d = new Date(y, m - 1, day);
+    if (d.getDay() === 5) out.push(d);
+  }
+  return out;
+}
+
+/**
+ * Semua hari Jumat di rentang bulan, mulai dari Jumat ke-`startWeek` (1-5) pada
+ * bulan `ym`, sebanyak `monthCount` bulan.
+ */
+export function fridaysInRange(ym: string, monthCount: number, startWeek = 1): Date[] {
   const parts = String(ym).split('-');
   if (parts.length !== 2) return [];
 
@@ -80,8 +101,18 @@ export function fridaysInRange(ym: string, monthCount: number): Date[] {
   if (!y || !m) return [];
 
   const end = new Date(y, m - 1 + monthCount, 0); // hari terakhir bulan ke-N
-  const cursor = new Date(y, m - 1, 1);
-  while (cursor.getDay() !== 5) cursor.setDate(cursor.getDate() + 1);
+  const monthFridays = fridaysInMonth(ym);
+
+  // Jumat ke-`startWeek`. Bila minggu tsb tidak ada di bulan ini (mis. bulan
+  // hanya punya 4 Jumat), mulai dari Jumat pertama bulan berikutnya.
+  const weekIdx = Math.max(0, (Math.trunc(startWeek) || 1) - 1);
+  let cursor = monthFridays[weekIdx];
+  if (cursor) {
+    cursor = new Date(cursor.getTime());
+  } else {
+    cursor = new Date(y, m, 1); // 1 hari setelah akhir bulan mulai
+    while (cursor.getDay() !== 5) cursor.setDate(cursor.getDate() + 1);
+  }
 
   const out: Date[] = [];
   while (cursor.getTime() <= end.getTime()) {

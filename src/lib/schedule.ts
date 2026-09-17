@@ -7,7 +7,7 @@ import type { ScheduleRow, Settings } from '../types';
 export function buildScheduleRows(names: string[], settings: Settings): ScheduleRow[] {
   if (names.length === 0) return [];
 
-  const dates = fridaysInRange(settings.start, settings.months);
+  const dates = fridaysInRange(settings.start, settings.months, settings.startWeek ?? 1);
   if (dates.length === 0) return [];
 
   const total = dates.length;

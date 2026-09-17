@@ -1,5 +1,5 @@
 import type { Person, ScheduleRow, Settings } from '../types';
-import { formatLong, formatShort, parseISO } from '../lib/date';
+import { BULAN, formatLong, formatShort, fridaysInMonth, parseISO } from '../lib/date';
 import { SparkIcon } from './Icons';
 
 type Props = {
@@ -15,13 +15,17 @@ type Props = {
   onRemoveRow: (id: string) => void;
 };
 
+// Pilihan jumlah bulan: 1..11 + pintasan "Setahun penuh" (12).
 const MONTH_OPTIONS = [
-  { value: 1, label: '1 bulan' },
-  { value: 2, label: '2 bulan' },
-  { value: 3, label: '3 bulan' },
-  { value: 6, label: '6 bulan' },
-  { value: 12, label: '12 bulan' },
+  ...Array.from({ length: 11 }, (_, i) => ({
+    value: i + 1,
+    label: `${i + 1} bulan`,
+  })),
 ];
+
+// Rentang tahun yang bisa dipilih (±3 tahun dari sekarang).
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 7 }, (_, i) => CURRENT_YEAR - 2 + i);
 
 export function ScheduleTab({
   settings, people, rows, nextRowId,
@@ -32,6 +36,28 @@ export function ScheduleTab({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayMs = today.getTime();
+
+  // Daftar Jumat dalam bulan mulai, untuk menampilkan label "Minggu ke-N".
+  const monthFridays = fridaysInMonth(settings.start);
+  const weekOptions = Array.from({ length: 5 }, (_, i) => {
+    const d = monthFridays[i];
+    return {
+      value: i + 1,
+      label: d
+        ? `Minggu ke-${i + 1} · Jumat, ${d.getDate()}/${d.getMonth() + 1}`
+        : `Minggu ke-${i + 1} · tidak ada Jumat`,
+      disabled: !d,
+    };
+  });
+
+  // Pecah settings.start (YYYY-MM) menjadi tahun & bulan terpisah.
+  const [startYearStr = '', startMonthStr = ''] = String(settings.start).split('-');
+  const startYear = Number(startYearStr) || CURRENT_YEAR;
+  const startMonthNum = Math.min(12, Math.max(1, Number(startMonthStr) || 1));
+
+  // Setel bulan mulai dari pasangan tahun + bulan.
+  const setStart = (year: number, month: number) =>
+    onSettings({ start: `${year}-${String(month).padStart(2, '0')}` });
 
   const confirmNonFriday = (date: string) => {
     const d = parseISO(date);
@@ -49,12 +75,43 @@ export function ScheduleTab({
         <div className="grid cols-3">
           <div className="field">
             <label htmlFor="startMonth">Bulan Mulai</label>
-            <input
+            <select
               id="startMonth"
-              type="month"
-              value={settings.start}
-              onChange={(e) => onSettings({ start: e.target.value })}
-            />
+              value={startMonthNum}
+              onChange={(e) => setStart(startYear, Number(e.target.value))}
+            >
+              {BULAN.map((name, i) => (
+                <option key={name} value={i + 1}>{i + 1}. {name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label htmlFor="startYear">Tahun Mulai</label>
+            <select
+              id="startYear"
+              value={startYear}
+              onChange={(e) => setStart(Number(e.target.value), startMonthNum)}
+            >
+              {YEAR_OPTIONS.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label htmlFor="startWeek">Minggu Mulai</label>
+            <select
+              id="startWeek"
+              value={settings.startWeek}
+              onChange={(e) => onSettings({ startWeek: Number(e.target.value) })}
+            >
+              {weekOptions.map((o) => (
+                <option key={o.value} value={o.value} disabled={o.disabled}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="field">
@@ -67,6 +124,7 @@ export function ScheduleTab({
               {MONTH_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
+              <option value={12}>Setahun penuh (12 bulan)</option>
             </select>
           </div>
 
