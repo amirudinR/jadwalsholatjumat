@@ -9,16 +9,18 @@ type Props = {
   onMasjid: (value: string) => void;
   onPrint: () => void;
   onShare: () => void;
+  onShareImage: () => void;
 };
 
 const MIN_ZOOM = 0.35;
 const MAX_ZOOM = 1.5;
 
-export function PreviewTab({ masjid, rows, onMasjid, onPrint, onShare }: Props) {
+export function PreviewTab({ masjid, rows, onMasjid, onPrint, onShare, onShareImage }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const paperRef = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState(1);
   const [userZoom, setUserZoom] = useState(1);
+  const [sharing, setSharing] = useState(false);
 
   // Hitung skala agar kertas A4 (210mm) muat di layar desktop & mobile.
   useLayoutEffect(() => {
@@ -61,6 +63,17 @@ export function PreviewTab({ masjid, rows, onMasjid, onPrint, onShare }: Props) 
   const zoomOut = () => setUserZoom((z) => Math.max(0.2, z - 0.15));
   const reset = () => setUserZoom(1);
 
+  const handleShareImage = async () => {
+    if (rows.length === 0 || sharing) return;
+    setSharing(true);
+    try {
+      await onShareImage();
+    } finally {
+      // Beri jeda singkat agar render gambar selesai sebelum tombol aktif lagi.
+      window.setTimeout(() => setSharing(false), 400);
+    }
+  };
+
   return (
     <>
       <div className="preview-bar no-print">
@@ -81,6 +94,16 @@ export function PreviewTab({ masjid, rows, onMasjid, onPrint, onShare }: Props) 
         <button className="btn outline sm" type="button" onClick={zoomOut} title="Perkecil">−</button>
         <button className="btn ghost sm" type="button" onClick={reset} title="Reset">Reset</button>
         <button className="btn outline sm" type="button" onClick={zoomIn} title="Perbesar">+</button>
+        <button
+          className="btn gold"
+          type="button"
+          onClick={handleShareImage}
+          disabled={sharing || rows.length === 0}
+          title="Bagikan gambar jadwal ke WhatsApp, Telegram, dll"
+        >
+          <ShareIcon />
+          {sharing ? 'Menyiapkan…' : 'Bagikan Foto'}
+        </button>
         <button className="btn outline" type="button" onClick={onShare}>
           <ShareIcon />
           Salin WA

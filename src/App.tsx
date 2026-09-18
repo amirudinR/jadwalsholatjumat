@@ -4,7 +4,7 @@ import { PeopleTab } from './components/PeopleTab';
 import { ScheduleTab } from './components/ScheduleTab';
 import { PreviewTab } from './components/PreviewTab';
 import { CrescentIcon, ToastHost } from './components/Icons';
-import { buildShareText, copyToClipboard } from './lib/share';
+import { buildShareText, copyToClipboard, downloadBlob, posterFileName, posterToBlob, shareImage } from './lib/share';
 
 type TabName = 'people' | 'schedule' | 'preview';
 
@@ -58,6 +58,47 @@ export default function App() {
     const ok = await copyToClipboard(buildShareText(state.masjid, sortedRows));
     j.toast(ok ? 'Jadwal disalin. Tempel di WhatsApp/grup.' : 'Gagal menyalin otomatis.', ok ? 'ok' : 'error');
   }, [j, sortedRows, state.masjid]);
+
+  const handleShareImage = useCallback(async () => {
+    if (sortedRows.length === 0) {
+      j.toast('Belum ada jadwal untuk dibagikan.', 'error');
+      return;
+    }
+    if (tab !== 'preview') {
+      j.toast('Buka tab Preview untuk membagikan gambar.', 'error');
+      return;
+    }
+
+    const poster = document.querySelector<HTMLElement>('.poster');
+    if (!poster) {
+      j.toast('Poster tidak ditemukan. Coba muat ulang halaman.', 'error');
+      return;
+    }
+
+    j.toast('Menyiapkan gambar…', 'info');
+    try {
+      const blob = await posterToBlob(poster);
+      const filename = posterFileName(state.masjid);
+      const text = `Jadwal Imam & Khatib Sholat Jum'at${state.masjid ? ` — ${state.masjid}` : ''}`;
+      const result = await shareImage(blob, filename, text);
+
+      if (result === 'shared') {
+        j.toast('Gambar jadwal dibagikan.', 'ok');
+      } else if (result === 'downloaded') {
+        j.toast('Gambar diunduh. Kirim manual ke WhatsApp/grup.', 'ok');
+      }
+      // 'cancelled' → dibatalkan pengguna, tidak perlu notifikasi.
+    } catch {
+      // Fallback terakhir: unduh langsung bila render gagal.
+      try {
+        const blob = await posterToBlob(poster);
+        downloadBlob(blob, posterFileName(state.masjid));
+        j.toast('Gambar diunduh. Kirim manual ke WhatsApp/grup.', 'ok');
+      } catch {
+        j.toast('Gagal membuat gambar jadwal.', 'error');
+      }
+    }
+  }, [j, sortedRows.length, state.masjid, tab]);
 
   const counts: Record<TabName, string> = {
     people: String(state.people.length),
@@ -138,6 +179,7 @@ export default function App() {
               onMasjid={(value) => j.patch({ masjid: value })}
               onPrint={handlePrint}
               onShare={handleShare}
+              onShareImage={handleShareImage}
             />
           )}
         </main>
