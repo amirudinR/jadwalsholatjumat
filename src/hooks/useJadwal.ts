@@ -185,10 +185,15 @@ export function useJadwal() {
     setState({ ...s, schedule: [] });
   }, []);
 
+  const replaceState = useCallback((next: AppState) => {
+    setState(next);
+  }, []);
+
   return {
     state,
     patch,
     patchSettings,
+    replaceState,
     sortedSchedule,
     nextRowId,
     people: state.people,

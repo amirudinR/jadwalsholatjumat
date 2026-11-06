@@ -17,7 +17,9 @@ Dibangun dengan **React 19 + TypeScript + Vite**.
 - **Preview & cetak** — tampilan poster A4 siap cetak/PDF, dengan zoom.
 - **Salin ke WhatsApp** — salin jadwal sebagai teks siap tempel.
 - **Nama masjid bisa diubah** dari header maupun langsung di tab Preview.
-- **Data tersimpan otomatis** di browser (localStorage) — tanpa server.
+- **Login** dengan akun Google atau sebagai tamu (anonim).
+- **Jadwal tersimpan di cloud** — simpan beberapa jadwal ke akun, lalu pilih & muat kembali kapan saja dari perangkat mana pun.
+- **Data lokal tersimpan otomatis** di browser (localStorage) — tanpa server.
 
 ## Menjalankan
 
@@ -29,19 +31,38 @@ pnpm preview  # pratinjau hasil build
 pnpm lint     # jalankan oxlint
 ```
 
+## Setup Firebase (wajib sebelum login berfungsi)
+
+1. Buka [Firebase Console](https://console.firebase.google.com/) → project `jadwalsholatjumat`.
+2. **Authentication → Sign-in method**: aktifkan **Google** dan **Anonymous**.
+3. **Authentication → Settings → Authorized domains**: tambahkan domain tempat app di-hosting (mis. `localhost` sudah otomatis).
+4. Buat database **Cloud Firestore**, lalu terapkan rules dari `firestore.rules`:
+   ```bash
+   firebase deploy --only firestore:rules
+   ```
+   Rules ini memastikan tiap user hanya bisa mengakses jadwal miliknya sendiri.
+
+Konfigurasi Firebase ada di `src/lib/firebase.ts`.
+
 ## Struktur
 
 ```
 src/
-  App.tsx                 # Shell aplikasi + navigasi tab
+  App.tsx                 # Shell aplikasi + navigasi tab + gerbang login
   components/
     PeopleTab.tsx         # Tab 1: kelola petugas
     ScheduleTab.tsx       # Tab 2: buat & kelola jadwal
-    PreviewTab.tsx        # Tab 3: preview & cetak A4
+    SavedTab.tsx          # Tab 3: simpan & pilih jadwal dari cloud
+    PreviewTab.tsx        # Tab 4: preview & cetak A4
+    LoginScreen.tsx       # Halaman login (Google / anonim)
     Icons.tsx             # Ikon SVG + Toast
   hooks/
     useJadwal.ts          # State utama, persistensi, aksi jadwal
+    useAuth.ts            # Status login & aksi masuk/keluar
   lib/
+    firebase.ts           # Inisialisasi Firebase (auth + firestore)
+    auth.ts               # Login Google / anonim + pesan error
+    cloud.ts              # Simpan/muat/hapus jadwal di Firestore
     date.ts               # Helper tanggal (parse, format, Jumat dalam rentang)
     rotation.ts           # Algoritma rotasi giliran (urut/acak deterministik)
     schedule.ts           # Perakitan baris jadwal

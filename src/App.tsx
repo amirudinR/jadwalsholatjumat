@@ -1,21 +1,26 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useJadwal } from './hooks/useJadwal';
+import { useAuth } from './hooks/useAuth';
 import { PeopleTab } from './components/PeopleTab';
 import { ScheduleTab } from './components/ScheduleTab';
 import { PreviewTab } from './components/PreviewTab';
+import { SavedTab } from './components/SavedTab';
+import { LoginScreen } from './components/LoginScreen';
 import { CrescentIcon, ToastHost } from './components/Icons';
 import { buildShareText, copyToClipboard, downloadBlob, posterFileName, posterToBlob, shareImage } from './lib/share';
 
-type TabName = 'people' | 'schedule' | 'preview';
+type TabName = 'people' | 'schedule' | 'saved' | 'preview';
 
 const TABS: { id: TabName; label: string }[] = [
   { id: 'people', label: 'Petugas' },
   { id: 'schedule', label: 'Jadwal' },
+  { id: 'saved', label: 'Tersimpan' },
   { id: 'preview', label: 'Preview & Cetak' },
 ];
 
 export default function App() {
   const j = useJadwal();
+  const session = useAuth();
   const [tab, setTab] = useState<TabName>('people');
   const { state } = j;
 
@@ -103,13 +108,32 @@ export default function App() {
   const counts: Record<TabName, string> = {
     people: String(state.people.length),
     schedule: String(state.schedule.length),
+    saved: '',
     preview: '',
   };
+
+  if (!session.ready) {
+    return <div className="boot">Memuat…</div>;
+  }
+
+  if (!session.user) {
+    return <LoginScreen busy={session.busy} onGoogle={session.loginGoogle} onAnon={session.loginAnon} />;
+  }
+
+  const user = session.user;
 
   return (
     <>
       <header className="app-header">
         <div className="header-inner">
+          <div className="account">
+            <span className="who" title={user.email ?? 'Tamu'}>
+              {user.email ?? 'Tamu (anonim)'}
+            </span>
+            <button className="link-btn" type="button" disabled={session.busy} onClick={() => void session.logout()}>
+              Keluar
+            </button>
+          </div>
           <div className="brand">
             <span className="crest" aria-hidden="true"><CrescentIcon /></span>
             <h1>Jadwal Imam &amp; Khatib Sholat Jumat</h1>
@@ -169,6 +193,15 @@ export default function App() {
               onClear={handleClear}
               onUpdateRow={j.updateRow}
               onRemoveRow={j.removeRow}
+            />
+          )}
+
+          {tab === 'saved' && (
+            <SavedTab
+              uid={user.uid}
+              current={state}
+              onLoad={j.replaceState}
+              toast={j.toast}
             />
           )}
 
